@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  zookeeper:
+    image: 'bitnami/zookeeper:3.6.0'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes 
+  bookkeeper_format:
+    image: 'apache/bookkeeper:4.10.0'
+    hostname: bookie1format
+    depends_on:
+      - zookeeper
+    restart: on-failure
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
+      - BK_zkServers=zookeeper:2181
+      - ZK_SERVERS=x:2181
+      - BK_zkLedgersRootPath = /ledgers
+      - BK_httpServerPort=3030
+      - BK_dlog.bkcWriteQuorumSize=1
+      - BK_dlog.bkcAckQuorumSize=1
+      - BK_dlog.bkcEnsembleSize=1
+    command: "bin/bookkeeper shell initnewcluster"
+  bookkeeper:
+    image: 'apache/bookkeeper:4.10.0'
+    hostname: bookie1
+    depends_on:
+      - bookkeeper_format
+    restart: on-failure
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
+      - BK_zkServers=zookeeper:2181
+      - BK_zkLedgersRootPath = /ledgers
+      - BK_httpServerPort=3030
+      - BK_dlog.bkcWriteQuorumSize=1
+      - BK_dlog.bkcAckQuorumSize=1
+      - BK_dlog.bkcEnsembleSize=1
+  pulsar_init:
+    image:  'apachepulsar/pulsar:2.5.0'
+    depends_on:
+      - zookeeper
+    restart: on-failure
+    volumes: 
+      - './pulsar_broker.conf:/tmp/pulsar_broker.conf'
+    entrypoint: sh -c "bin/pulsar initialize-cluster-metadata --cluster local_pulsar --zookeeper zookeeper --configuration-store zookeeper --web-service-url http://localhost:8080/ --broker-service-url pulsar://localhost:6650/ || true";
+  pulsar:
+    image: 'apachepulsar/pulsar:2.5.0'
+    hostname: pulsarlocal
+    depends_on:
+      - pulsar_init
+    restart: on-failure
+    ports:
+      - '6650:6650'
+      - '8080:8080'  
+    volumes:
+      - './pulsar_broker.conf:/tmp/pulsar_broker.conf'
+    environment:
+      - PULSAR_BROKER_CONF=/tmp/pulsar_broker.conf
+    entrypoint: bin/pulsar broker
