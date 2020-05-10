@@ -13,6 +13,11 @@ services:
     depends_on:
       - zookeeper
     restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     environment:
       - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
       - BK_zkServers=zookeeper:2181
@@ -29,6 +34,11 @@ services:
     depends_on:
       - bookkeeper_format
     restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 6
     environment:
       - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
       - BK_zkServers=zookeeper:2181
@@ -42,6 +52,11 @@ services:
     depends_on:
       - zookeeper
     restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     volumes: 
       - './pulsar_broker.conf:/tmp/pulsar_broker.conf'
     entrypoint: sh -c "bin/pulsar initialize-cluster-metadata --cluster local_pulsar --zookeeper zookeeper --configuration-store zookeeper --web-service-url http://localhost:8080/ --broker-service-url pulsar://localhost:6650/ || true";
